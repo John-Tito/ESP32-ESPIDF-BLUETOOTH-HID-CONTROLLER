@@ -26,7 +26,11 @@
 			"ostream": "c",
 			"sstream": "c",
 			"string": "cpp",
-			"string_view": "cpp"
+			"string_view": "cpp",
+			"*.ipp": "cpp",
+			"queue": "cpp",
+			"iostream": "cpp",
+			"CMD.H": "cpp"
 		}
 	}
 }

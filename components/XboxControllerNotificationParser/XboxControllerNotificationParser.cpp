@@ -15,7 +15,7 @@ XboxControllerNotificationParser::XboxControllerNotificationParser()
   joyLHori = joyLVert = joyRHori = joyRVert = 0xffff / 2;
   trigLT = trigRT = 0;
 }
-//fd 8d 78 84 7a 83 bc 83 00 00 00 00 00 a0 d0 fd
+// fd 8d 78 84 7a 83 bc 83 00 00 00 00 00 a0 d0 fd
 uint8_t XboxControllerNotificationParser::update(uint8_t *data, size_t length)
 {
   if (length != 16)
@@ -36,15 +36,6 @@ uint8_t XboxControllerNotificationParser::update(uint8_t *data, size_t length)
   btnDirRight = 2 <= btnBits && btnBits <= 4;
   btnDirDown = 4 <= btnBits && btnBits <= 6;
   btnDirLeft = 6 <= btnBits && btnBits <= 8;
-
-  // up:1         00000001
-  // up+right:2   00000010
-  // right:3      00000011
-  // down+right:4 00000100
-  // down:5       00000101
-  // down+left:6  00000110
-  // left:7       00000111
-  // up+left:8    00001000
 
   btnBits = data[XBOX_CONTROLLER_INDEX_BUTTONS_MAIN];
   btnA = btnBits & 0b00000001;

@@ -6,192 +6,168 @@
 #include <iostream>
 #include <string.h>
 
-#include "esp_bt.h"
-#include "esp_bt_defs.h"
-#include "esp_bt_device.h"
-#include "esp_bt_main.h"
 #include "esp_event.h"
-#include "esp_gap_ble_api.h"
-#include "esp_gatt_defs.h"
-#include "esp_gatts_api.h"
 #include "esp_log.h"
 #include "esp_system.h"
-#include "esp_wifi.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
-#include "nvs_flash.h"
+#include "hal/timer_hal.h"
 
+#include "XboxControllerNotificationParser.hpp" // This will pull in our MPG implementation
+#include "controlerHandler.hpp"
 #include "esp_hid_gap.h"
-#include "esp_hidh.h"
-
-#include "USER_LOGI.h"
-
-#include "./XboxControllerNotificationParser/src/XboxControllerNotificationParser.hpp" // This will pull in our MPG implementation
+#include "lvgl.h"
+#include "lvgl_helpers.h"
 
 static const char *TAG = "TEST";
 XboxControllerNotificationParser parser;
+uint8_t raw1[17];
+XboxController_input_report_t raw2;
 
-QueueHandle_t queue;
-input_report_raw_t raw_data;
-void hid_demo_task(void *pvParameters);
+void lv_ex_list_1(void);
 void task_printout(void *param);
-void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
-{
-    esp_hidh_event_t event = (esp_hidh_event_t)id;
-    esp_hidh_event_data_t *param = (esp_hidh_event_data_t *)event_data;
-
-    switch (event)
-    {
-    case ESP_HIDH_OPEN_EVENT:
-    {
-        const uint8_t *bda = esp_hidh_dev_bda_get(param->open.dev);
-        ESP_LOGI(TAG, ESP_BD_ADDR_STR " OPEN: %s", ESP_BD_ADDR_HEX(bda), esp_hidh_dev_name_get(param->open.dev));
-        esp_hidh_dev_dump(param->open.dev, stdout);
-        break;
-    }
-    case ESP_HIDH_BATTERY_EVENT:
-    {
-        const uint8_t *bda = esp_hidh_dev_bda_get(param->battery.dev);
-        ESP_LOGI(TAG, ESP_BD_ADDR_STR " BATTERY: %d%%", ESP_BD_ADDR_HEX(bda), param->battery.level);
-        break;
-    }
-    case ESP_HIDH_INPUT_EVENT:
-    {
-        const uint8_t *bda = esp_hidh_dev_bda_get(param->input.dev);
-        if (NULL != bda)
-        {
-            memcpy(raw_data.data, param->input.data, param->input.length);
-            raw_data.length = param->input.length;
-            xQueueSend(queue, (void *)(&raw_data), 0);
-        }
-        break;
-    }
-    case ESP_HIDH_FEATURE_EVENT:
-    {
-        const uint8_t *bda = esp_hidh_dev_bda_get(param->feature.dev);
-        ESP_LOGI(TAG, ESP_BD_ADDR_STR " FEATURE: %8s, MAP: %2u, ID: %3u, Len: %d", ESP_BD_ADDR_HEX(bda), esp_hid_usage_str(param->feature.usage), param->feature.map_index, param->feature.report_id, param->feature.length);
-        ESP_LOG_BUFFER_HEX(TAG, param->feature.data, param->feature.length);
-        break;
-    }
-    case ESP_HIDH_CLOSE_EVENT:
-    {
-        const uint8_t *bda = esp_hidh_dev_bda_get(param->close.dev);
-        ESP_LOGI(TAG, ESP_BD_ADDR_STR " CLOSE: '%s' %s", ESP_BD_ADDR_HEX(bda), esp_hidh_dev_name_get(param->close.dev), esp_hid_disconnect_reason_str(esp_hidh_dev_transport_get(param->close.dev), param->close.reason));
-        // MUST call this function to free all allocated memory by this device
-        esp_hidh_dev_free(param->close.dev);
-        break;
-    }
-    default:
-        ESP_LOGI(TAG, "EVENT: %d", event);
-        break;
-    }
-}
-
-#define SCAN_DURATION_SECONDS 5
-
-void hid_demo_task(void *pvParameters)
-{
-    size_t results_len = 0;
-    esp_hid_scan_result_t *results = NULL;
-    while (NULL == queue)
-    {
-        vTaskDelay(1000);
-        ESP_LOGI(TAG, "wait queue...");
-    }
-
-    ESP_LOGI(TAG, "SCAN...");
-    // start scan for HID devices
-    esp_hid_scan(SCAN_DURATION_SECONDS, &results_len, &results);
-    ESP_LOGI(TAG, "SCAN: %u results", results_len);
-    if (results_len)
-    {
-        esp_hid_scan_result_t *r = results;
-        esp_hid_scan_result_t *cr = NULL;
-        while (r)
-        {
-            ESP_LOGI(TAG, "%s: " ESP_BD_ADDR_STR "\n", (r->transport == ESP_HID_TRANSPORT_BLE) ? "BLE" : "BT ", ESP_BD_ADDR_HEX(r->bda));
-            ESP_LOGI(TAG, "RSSI: %d\n", r->rssi);
-            ESP_LOGI(TAG, "USAGE: %s\n", esp_hid_usage_str(r->usage));
-            if (r->transport == ESP_HID_TRANSPORT_BLE)
-            {
-                cr = r;
-                ESP_LOGI(TAG, "APPEARANCE: 0x%04x\n", r->ble.appearance);
-                ESP_LOGI(TAG, "ADDR_TYPE: %s\n", ble_addr_type_str(r->ble.addr_type));
-            }
-            else
-            {
-                cr = r;
-
-                ESP_LOGI(TAG, "COD: %s[", esp_hid_cod_major_str(r->bt.cod.major));
-                esp_hid_cod_minor_print(r->bt.cod.minor, stdout);
-                printf("]\n");
-
-                ESP_LOGI(TAG, "srv 0x%03x\n", r->bt.cod.service);
-
-                ESP_LOGI(TAG, "uuid:");
-                print_uuid(&r->bt.uuid);
-                printf("\n");
-            }
-
-            ESP_LOGI(TAG, "NAME:%s", r->name ? r->name : "");
-            printf("\n");
-            r = r->next;
-        }
-        if (cr)
-        {
-            // open the last result
-            esp_hidh_dev_open(cr->bda, cr->transport, cr->ble.addr_type);
-        }
-        // free the results
-        esp_hid_scan_results_free(results);
-    }
-    vTaskDelete(NULL);
-}
+void task_ui(void *param);
+void lv_update_request(void *);
 
 extern "C" void app_main(void)
 {
-    esp_err_t ret;
-    ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-#if CONFIG_BT_CLASSIC_ENABLED
-    ESP_ERROR_CHECK(esp_hid_gap_init(ESP_BT_MODE_BTDM));
-#else
-    ESP_ERROR_CHECK(esp_hid_gap_init(ESP_BT_MODE_BLE));
-#endif
-    ESP_ERROR_CHECK(esp_ble_gattc_register_callback(esp_hidh_gattc_event_handler));
-    esp_hidh_config_t config = {
-        .callback = hidh_callback,
-    };
-    ESP_ERROR_CHECK(esp_hidh_init(&config));
-    queue = xQueueCreate(10, sizeof(input_report_raw_t));
-    if (queue == NULL)
-    {
-        ESP_LOGE(TAG, "Error creating the queue");
-    }
-    xTaskCreate(&hid_demo_task, "hid_task", 6 * 1024, NULL, 2, NULL);
-    xTaskCreate(&task_printout, "key_out", 6 * 1024, NULL, 2, NULL);
+    if (controler_hid_init())
+        xTaskCreate(&task_printout, "key_out", 10 * 1024, NULL, 2, NULL);
+    xTaskCreate(&task_ui, "ui_loop", 10 * 1024, NULL, 2, NULL);
 }
 
-input_report_raw_t raw1;
 void task_printout(void *param)
 {
-    while (NULL == queue)
+    while (NULL == controllerQueue)
     {
         vTaskDelay(1000);
         ESP_LOGI(TAG, "wait queue...");
     }
     while (1)
     {
-        xQueueReceive(queue, &raw1, portMAX_DELAY);
-        if (parser.update(raw1.data, raw1.length))
-            ESP_LOGI(TAG, "LT:%d", parser.trigLT);
-        ESP_LOG_BUFFER_HEX(TAG, raw1.data, raw1.length);
+        if (xQueueReceive(controllerQueue, &raw1, (TickType_t)10))
+            if (0 == parser.update(&raw1[1], raw1[0]))
+            {
+                ESP_LOGI(TAG, "LT:%d", parser.trigLT);
+                memcpy(&raw2, &raw1[1], raw1[0]);
+                ESP_LOGI(TAG, "LX:%d", raw2.joyLX);
+            }
+        ESP_LOG_BUFFER_HEX(TAG, (void *)&raw1[1], raw1[0]);
         vTaskDelay(50);
     }
+    vTaskDelete(NULL);
+}
+// // void (*_lv_indev_drv_t::read_cb)(_lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
+// void xInput_read(lv_indev_drv_t *drv, lv_indev_data_t *data)
+// {
+//     data->point.x = 0;
+//     data->point.y = 0;
+//     data->state = LV_INDEV_STATE_PRESSED;
+
+//     data->key =
+// }
+
+/* create frame buffer */
+SemaphoreHandle_t xGUISemaphore;
+void task_ui(void *param)
+{
+    xGUISemaphore = xSemaphoreCreateMutex();
+    static lv_disp_draw_buf_t draw_buf;
+    static lv_color_t *frame_buf1;
+    static lv_color_t *frame_buf2;
+
+    frame_buf1 = (lv_color_t *)heap_caps_malloc((DISP_BUF_SIZE * (LV_COLOR_DEPTH / 8)), MALLOC_CAP_SPIRAM | MALLOC_CAP_32BIT);
+    frame_buf2 = (lv_color_t *)heap_caps_malloc((DISP_BUF_SIZE * (LV_COLOR_DEPTH / 8)), MALLOC_CAP_SPIRAM | MALLOC_CAP_32BIT);
+    if (NULL == frame_buf1)
+    {
+        frame_buf1 = (lv_color_t *)heap_caps_malloc((DISP_BUF_SIZE * (LV_COLOR_DEPTH / 8)), MALLOC_CAP_DEFAULT | MALLOC_CAP_32BIT);
+        ESP_LOGW("ui", "err when malloc frame buffer1 from psram");
+    }
+    if (NULL == frame_buf2)
+    {
+        frame_buf2 = (lv_color_t *)heap_caps_malloc((DISP_BUF_SIZE * (LV_COLOR_DEPTH / 8)), MALLOC_CAP_DEFAULT | MALLOC_CAP_32BIT);
+        ESP_LOGW("ui", "err when malloc frame buffer2 from psram");
+    }
+
+    if ((NULL == frame_buf1) || (NULL == frame_buf2))
+    {
+        ESP_LOGE("ui", "err when malloc frame buffer");
+        exit(-4);
+    }
+
+    lvgl_driver_init();
+    ESP_LOGI("ui", "lvgl_driver_init_done");
+
+    lv_init();
+    ESP_LOGI("ui", "lv_init_done");
+
+    lv_disp_draw_buf_init(&draw_buf, frame_buf1, frame_buf2, DISP_BUF_SIZE);
+
+    /*Initialize the display*/
+    static lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+
+    /*Change the following line to your display resolution*/
+    disp_drv.hor_res = CONFIG_LV_VER_RES_MAX;
+    disp_drv.ver_res = CONFIG_LV_HOR_RES_MAX;
+    disp_drv.flush_cb = disp_driver_flush;
+    disp_drv.draw_buf = &draw_buf;
+    lv_disp_drv_register(&disp_drv);
+
+    static lv_indev_drv_t indev_drv;
+    lv_indev_drv_init(&indev_drv); /*Basic initialization*/
+
+    // indev_drv.type = LV_INDEV_TYPE_KEYPAD; /*See below.*/
+    // indev_drv.read_cb = xInput_read;       /*See below.*/
+
+    // /*Register the driver in LVGL and save the created input device object*/
+    // lv_indev_t *my_indev = lv_indev_drv_register(&indev_drv);
+
+    ESP_LOGI("ui", "lv_disp_drv_init_done");
+
+    // esp_timer_create_args_t ui_timer_args = {
+    //     .callback = lv_update_request,
+    //     .name = "ui_timer"};
+    // esp_timer_handle_t ui_timer;
+
+    // ESP_ERROR_CHECK(esp_timer_create(&ui_timer_args, &ui_timer));
+    // ESP_ERROR_CHECK(esp_timer_start_periodic(ui_timer, CONFIG_LV_DISP_DEF_REFR_PERIOD * 1000));
+
+    lv_ex_list_1();
+
+    while (1)
+    {
+
+        vTaskDelay(30 / portTICK_PERIOD_MS);
+        // xSemaphoreTake(xGUISemaphore, portMAX_DELAY);
+        lv_timer_handler();
+        // xSemaphoreGive(xGUISemaphore);
+    }
+    vTaskDelete(NULL);
+}
+
+void lv_ex_list_1(void)
+{
+    /*Create a list*/
+    lv_obj_t *list1 = lv_list_create(lv_scr_act());
+    lv_obj_set_size(list1, 128, 128);
+    lv_obj_align(list1, LV_ALIGN_CENTER, 0, 0);
+
+    /*Add buttons to the list*/
+    lv_obj_t *list_btn;
+
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_FILE, "New");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_DIRECTORY, "Open");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_CLOSE, "Delete");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_EDIT, "Edit");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_SAVE, "Save");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_BELL, "Notify");
+    list_btn = lv_list_add_btn(list1, LV_SYMBOL_BATTERY_FULL, "Battery");
+}
+
+void lv_update_request(void *)
+{
+    lv_tick_inc(CONFIG_LV_DISP_DEF_REFR_PERIOD);
 }

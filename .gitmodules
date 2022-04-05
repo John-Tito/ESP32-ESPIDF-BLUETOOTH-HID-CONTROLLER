@@ -1,0 +1,6 @@
+[submodule "components/lvgl_esp32_drivers"]
+	path = components/lvgl_esp32_drivers
+	url = git@github.com:John-Tito/lvgl_esp32_drivers.git
+[submodule "components/lvgl"]
+	path = components/lvgl
+	url = git@github.com:John-Tito/lvgl.git
