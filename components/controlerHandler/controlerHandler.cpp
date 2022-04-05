@@ -22,8 +22,12 @@
 
 static const char *TAG = "BTU";
 
-QueueHandle_t controllerQueue;
-uint8_t raw_data[17];
+uint8_t xInputRawData[17];
+XboxControllerNotificationParser xInputParser;
+QueueHandle_t xInputQueue;
+EventGroupHandle_t xInputEventHandle = NULL;
+SemaphoreHandle_t xInputSemaphore = NULL;
+
 void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
     esp_hidh_event_t event = (esp_hidh_event_t)id;
@@ -47,11 +51,21 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
     case ESP_HIDH_INPUT_EVENT:
     {
         const uint8_t *bda = esp_hidh_dev_bda_get(param->input.dev);
-        if (NULL != bda)
+        if ((NULL != bda) && (NULL != xInputEventHandle) && xSemaphoreTake(xInputSemaphore, 0))
         {
-            memcpy(&raw_data[1], param->input.data, param->input.length);
-            raw_data[0] = param->input.length;
-            xQueueSend(controllerQueue, (void *)(&raw_data), 0);
+            xInputRawData[0] = param->input.length;
+            memcpy(&xInputRawData[1], param->input.data, param->input.length);
+            if (0 == xInputParser.update(&xInputRawData[1], xInputRawData[0]))
+            {
+                // xQueueSend(xInputQueue, (void *)(&xInputRawData), 0);
+                // xEventGroupSetBits(xInputEventHandle, XINPUT_UPDATE);
+                // ESP_LOGI(TAG, "%d:%d", param->input.report_id, param->input.length);
+            }
+            else
+            {
+                ESP_LOGW(TAG, "invalid pack");
+            }
+            xSemaphoreGive(xInputSemaphore);
         }
         break;
     }
@@ -82,7 +96,7 @@ void hid_demo_task(void *pvParameters)
 {
     size_t results_len = 0;
     esp_hid_scan_result_t *results = NULL;
-    while (NULL == controllerQueue)
+    while (NULL == xInputQueue)
     {
         vTaskDelay(1000);
         ESP_LOGI(TAG, "wait queue...");
@@ -167,10 +181,24 @@ bool controler_hid_init(void)
     ret = esp_hidh_init(&config);
     ESP_ERROR_CHECK(ret);
 
-    controllerQueue = xQueueCreate(10, sizeof(raw_data));
-    if (controllerQueue == NULL)
+    xInputQueue = xQueueCreate(10, sizeof(xInputRawData));
+    if (xInputQueue == NULL)
     {
         ESP_LOGE(TAG, "Error creating the queue");
+        return false;
+    }
+
+    xInputSemaphore = xSemaphoreCreateMutex();
+    if (xInputSemaphore == NULL)
+    {
+        ESP_LOGE(TAG, "Error creating Semaphore");
+        return false;
+    }
+
+    xInputEventHandle = xEventGroupCreate();
+    if (xInputEventHandle == NULL)
+    {
+        ESP_LOGE(TAG, "Error creating eventHandle");
         return false;
     }
 

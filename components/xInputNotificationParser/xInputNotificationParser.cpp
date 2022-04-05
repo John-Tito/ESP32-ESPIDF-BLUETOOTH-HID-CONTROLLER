@@ -1,4 +1,4 @@
-#include "XboxControllerNotificationParser.hpp"
+#include "xInputNotificationParser.hpp"
 
 #define XBOX_CONTROLLER_DATA_LEN 16
 #define XBOX_CONTROLLER_INDEX_BUTTONS_DIR 12
@@ -31,6 +31,20 @@ uint8_t XboxControllerNotificationParser::update(uint8_t *data, size_t length)
   trigLT = (uint16_t)data[8] | ((uint16_t)data[9] << 8);
   trigRT = (uint16_t)data[10] | ((uint16_t)data[11] << 8);
 
+  joyMin = joyLHori < joyMin ? joyLHori : joyMin;
+  joyMax = joyLHori > joyMax ? joyLHori : joyMax;
+
+  joyMin = joyLVert < joyMin ? joyLVert : joyMin;
+  joyMax = joyLVert > joyMax ? joyLVert : joyMax;
+
+  joyMin = joyRHori < joyMin ? joyRHori : joyMin;
+  joyMax = joyRHori > joyMax ? joyRHori : joyMax;
+
+  joyMin = joyRVert < joyMin ? joyRVert : joyMin;
+  joyMax = joyRVert > joyMax ? joyRVert : joyMax;
+
+  joyMid = (joyMin + joyMax) / 2;
+
   btnBits = data[XBOX_CONTROLLER_INDEX_BUTTONS_DIR];
   btnDirUp = btnBits == 1 || btnBits == 2 || btnBits == 8;
   btnDirRight = 2 <= btnBits && btnBits <= 4;
@@ -54,34 +68,11 @@ uint8_t XboxControllerNotificationParser::update(uint8_t *data, size_t length)
 
   btnBits = data[XBOX_CONTROLLER_INDEX_BUTTONS_SHARE];
   btnShare = btnBits & 0b00000001;
+  outOfDate = true;
   return 0;
 }
 
 string XboxControllerNotificationParser::toString()
 {
-  string str = string("") +
-               "btnY: " + to_string(btnY) + " " +
-               "btnX: " + to_string(btnX) + " " +
-               "btnB: " + to_string(btnB) + " " +
-               "btnA: " + to_string(btnA) + " " +
-               "btnLB: " + to_string(btnLB) + " " +
-               "btnRB: " + to_string(btnRB) + "\n" +
-               "btnSelect: " + to_string(btnSelect) + " " +
-               "btnStart: " + to_string(btnStart) + " " +
-               "btnXbox: " + to_string(btnXbox) + " " +
-               "btnShare: " + to_string(btnShare) + " " +
-               "btnLS: " + to_string(btnLS) + " " +
-               "btnRS: " + to_string(btnRS) + "\n" +
-               "btnDirUp: " + to_string(btnDirUp) + " " +
-               "btnDirRight: " + to_string(btnDirRight) + " " +
-               "btnDirDown: " + to_string(btnDirDown) + " " +
-               "btnDirLeft: " + to_string(btnDirLeft) + "\n"
-                                                        "joyLHori: " +
-               to_string(joyLHori) + "\n" +
-               "joyLVert: " + to_string(joyLVert) + "\n" +
-               "joyRHori: " + to_string(joyRHori) + "\n" +
-               "joyRVert: " + to_string(joyRVert) + "\n" +
-               "trigLT: " + to_string(trigLT) + "\n" +
-               "trigRT: " + to_string(trigRT) + "\n";
-  return str;
+  return string("");
 }

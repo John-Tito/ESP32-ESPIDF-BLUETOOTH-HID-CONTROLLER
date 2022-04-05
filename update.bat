@@ -1,2 +1,0 @@
-git submodule add --force https://hub.xn--gzu630h.xn--kpry57d/lvgl/lvgl.git components/lvgl
-git submodule add --force https://hub.xn--gzu630h.xn--kpry57d/lvgl/lvgl_esp32_drivers.git components/lvgl_esp32_drivers

@@ -80,6 +80,10 @@ class XboxControllerNotificationParser
 public:
     XboxControllerNotificationParser();
 
+    uint16_t joyMax = 0;
+    uint16_t joyMid = 0;
+    uint16_t joyMin = UINT16_MAX / 2;
+    bool outOfDate;
     bool btnA, btnB, btnX, btnY;
     bool btnShare, btnStart, btnSelect, btnXbox;
     bool btnLB, btnRB, btnLS, btnRS;
