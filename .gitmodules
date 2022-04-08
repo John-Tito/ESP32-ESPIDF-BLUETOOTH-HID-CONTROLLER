@@ -4,3 +4,6 @@
 [submodule "components/lvgl"]
 	path = components/lvgl
 	url = git@github.com:John-Tito/lvgl.git
+[submodule "components/XboxControllerNotificationParser"]
+	path = components/XboxControllerNotificationParser
+	url = https://github.com/John-Tito/arduino-XboxControllerNotificationParser.git

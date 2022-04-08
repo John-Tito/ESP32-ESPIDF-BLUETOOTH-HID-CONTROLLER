@@ -2,12 +2,12 @@
 #ifndef _CONTROLERHANDLER_H_
 #define _CONTROLERHANDLER_H_
 
+#include "XboxControllerNotificationParser.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
-#include "xInputNotificationParser.hpp"
 #include <iostream>
 #include <string.h>
 
