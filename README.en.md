@@ -1,36 +1,25 @@
 # ESP32-ESPIDF-BLUETOOTH-HID-CONTROLLER
 
 #### Description
-基于ESPIDF HID例程修改而来，使用经典蓝牙和Xbox ONE 手柄连接并进行键值解析
+ESP-IDF BT/BLE HID Host Demo Connect to XBOX ONE S Controller
+
+An example use left triger and right triger of the controller to change the dutu of pwm
 
 #### Software Architecture
-Software architecture description
+framework:
 
-#### Installation
+[platform-espressif32(Releases 3.5.0)](https://github.com/platformio/platform-espressif32)
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+components:
 
-#### Instructions
+ - [lvgl](https://github.com/lvgl/lvgl)
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+ - [lvgl_esp32_drivers](https://github.com/lvgl/lvgl_esp32_drivers)
 
-#### Contribution
+ - [XboxControllerNotificationParser](https://github.com/asukiaaa/arduino-XboxControllerNotificationParser)
 
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
+ - [controlerHandler](./components/controlerHandler/controlerHandler.cpp)
 
+ - [esp_hid_gap](./components/esp_hid_gap/esp_hid_gap.c)
 
-#### Gitee Feature
-
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+    refer to framework-espidf\examples\bluetooth\esp_hid_host

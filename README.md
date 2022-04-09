@@ -2,37 +2,26 @@
 
 #### 介绍
 基于ESPIDF HID例程修改而来，使用经典蓝牙和Xbox ONE 手柄连接并进行键值解析
+
 ESP-IDF BT/BLE HID Host Demo Connect to XBOX ONE S Controller
+
+使用手柄左扳机和右扳机键来控制PWM占空比的例子
+
+An example use left triger and right triger of the controller to change the dutu of pwm
 #### 软件架构
-软件架构说明
 
+框架/framework:[platform-espressif32(Releases 3.5.0)](https://github.com/platformio/platform-espressif32)
 
-#### 安装教程
+组件/components:
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+ - [lvgl](https://github.com/lvgl/lvgl)
 
-#### 使用说明
+ - [lvgl_esp32_drivers](https://github.com/lvgl/lvgl_esp32_drivers)
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+ - [XboxControllerNotificationParser](https://github.com/asukiaaa/arduino-XboxControllerNotificationParser)
 
-#### 参与贡献
+ - [controlerHandler](./components/controlerHandler/controlerHandler.cpp)
 
-1.  Fork 本仓库
-2.  新建 Feat_xxx 分支
-3.  提交代码
-4.  新建 Pull Request
+ - [esp_hid_gap](./components/esp_hid_gap/esp_hid_gap.c)
 
-
-#### 特技
-
-1.  使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2.  Gitee 官方博客 [blog.gitee.com](https://blog.gitee.com)
-3.  你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解 Gitee 上的优秀开源项目
-4.  [GVP](https://gitee.com/gvp) 全称是 Gitee 最有价值开源项目，是综合评定出的优秀开源项目
-5.  Gitee 官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6.  Gitee 封面人物是一档用来展示 Gitee 会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
-
+    参考 framework-espidf\examples\bluetooth\esp_hid_host
