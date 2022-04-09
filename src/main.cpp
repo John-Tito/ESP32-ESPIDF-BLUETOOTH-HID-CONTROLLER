@@ -121,8 +121,8 @@ static void mouse_get_xy(int16_t *x, int16_t *y)
     static int16_t last_y = 0;
     int32_t inc_x = 0, inc_y = 0;
 
-    inc_x = (10 * ((int32_t)xInputParser.joyLHori - (int32_t)xInputParser.joyMid) / (int32_t)xInputParser.joyMax);
-    inc_y = (10 * ((int32_t)xInputParser.joyLVert - (int32_t)xInputParser.joyMid) / (int32_t)xInputParser.joyMax);
+    inc_x = (10 * ((int32_t)xInputParser.joyLHori - (int32_t)xInputParser.JOY_MID) / (int32_t)xInputParser.JOY_MAX);
+    inc_y = (10 * ((int32_t)xInputParser.joyLVert - (int32_t)xInputParser.JOY_MID) / (int32_t)xInputParser.JOY_MAX);
 
     last_x += inc_x;
     last_x = (last_x < CONFIG_LV_HOR_RES_MAX) ? last_x : CONFIG_LV_HOR_RES_MAX;
