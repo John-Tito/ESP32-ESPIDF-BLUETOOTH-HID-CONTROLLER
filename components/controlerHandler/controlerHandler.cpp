@@ -53,17 +53,22 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
         const uint8_t *bda = esp_hidh_dev_bda_get(param->input.dev);
         if ((NULL != bda) && (NULL != xInputEventHandle) && xSemaphoreTake(xInputSemaphore, 0))
         {
-            xInputRawData[0] = param->input.length;
-            memcpy(&xInputRawData[1], param->input.data, param->input.length);
-            if (0 == xInputParser.update(&xInputRawData[1], xInputRawData[0]))
+            if (16 == param->input.length)
             {
-                // xQueueSend(xInputQueue, (void *)(&xInputRawData), 0);
-                // xEventGroupSetBits(xInputEventHandle, XINPUT_UPDATE);
-                // ESP_LOGI(TAG, "%d:%d", param->input.report_id, param->input.length);
-            }
-            else
-            {
-                ESP_LOGW(TAG, "invalid pack");
+                xInputRawData[0] = param->input.length;
+                memcpy(&xInputRawData[1], param->input.data, param->input.length);
+                if (0 == xInputParser.update(&xInputRawData[1], xInputRawData[0]))
+                {
+                    xInputParser.outOfDate = true;
+                    // xQueueSend(xInputQueue, (void *)(&xInputRawData), 0);
+                    // xEventGroupSetBits(xInputEventHandle, XINPUT_UPDATE);
+                    // ESP_LOGI(TAG, "%d:%d", param->input.report_id, param->input.length);
+                }
+                else
+                {
+                    // esp_hidh_dev_output_set(param->input.dev, );
+                    ESP_LOGW(TAG, "invalid pack");
+                }
             }
             xSemaphoreGive(xInputSemaphore);
         }

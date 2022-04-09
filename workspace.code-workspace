@@ -30,7 +30,12 @@
 			"*.ipp": "cpp",
 			"queue": "cpp",
 			"iostream": "cpp",
-			"CMD.H": "cpp"
+			"CMD.H": "cpp",
+			"optional": "cpp",
+			"functional": "cpp",
+			"future": "cpp",
+			"iosfwd": "cpp",
+			"stdexcept": "cpp"
 		}
 	}
 }
