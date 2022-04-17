@@ -35,7 +35,9 @@
 			"functional": "cpp",
 			"future": "cpp",
 			"iosfwd": "cpp",
-			"stdexcept": "cpp"
-		}
+			"stdexcept": "cpp",
+			"cmath": "cpp"
+		},
+		"esbonio.sphinx.confDir": ""
 	}
 }
