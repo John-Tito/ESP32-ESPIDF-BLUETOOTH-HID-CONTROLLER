@@ -12,10 +12,6 @@ framework:
 
 components:
 
- - [lvgl](https://github.com/lvgl/lvgl)
-
- - [lvgl_esp32_drivers](https://github.com/lvgl/lvgl_esp32_drivers)
-
  - [XboxControllerNotificationParser](https://github.com/asukiaaa/arduino-XboxControllerNotificationParser)
 
  - [controlerHandler](./components/controlerHandler/controlerHandler.cpp)

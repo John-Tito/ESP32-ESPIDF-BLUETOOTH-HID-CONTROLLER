@@ -14,10 +14,6 @@ An example use left triger and right triger of the controller to change the dutu
 
 组件/components:
 
- - [lvgl](https://github.com/lvgl/lvgl)
-
- - [lvgl_esp32_drivers](https://github.com/lvgl/lvgl_esp32_drivers)
-
  - [XboxControllerNotificationParser](https://github.com/asukiaaa/arduino-XboxControllerNotificationParser)
 
  - [controlerHandler](./components/controlerHandler/controlerHandler.cpp)
