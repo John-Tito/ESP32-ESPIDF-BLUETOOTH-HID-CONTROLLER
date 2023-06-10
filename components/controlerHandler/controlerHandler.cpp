@@ -24,8 +24,6 @@ static const char *TAG = "BTU";
 
 uint8_t xInputRawData[17];
 XboxControllerNotificationParser xInputParser;
-QueueHandle_t xInputQueue;
-EventGroupHandle_t xInputEventHandle = NULL;
 SemaphoreHandle_t xInputSemaphore = NULL;
 
 void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
@@ -37,6 +35,7 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
     {
     case ESP_HIDH_OPEN_EVENT:
     {
+        // 设备打开事件
         const uint8_t *bda = esp_hidh_dev_bda_get(param->open.dev);
         ESP_LOGI(TAG, ESP_BD_ADDR_STR " OPEN: %s", ESP_BD_ADDR_HEX(bda), esp_hidh_dev_name_get(param->open.dev));
         esp_hidh_dev_dump(param->open.dev, stdout);
@@ -44,25 +43,27 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
     }
     case ESP_HIDH_BATTERY_EVENT:
     {
+        // 设备电量事件
         const uint8_t *bda = esp_hidh_dev_bda_get(param->battery.dev);
         ESP_LOGI(TAG, ESP_BD_ADDR_STR " BATTERY: %d%%", ESP_BD_ADDR_HEX(bda), param->battery.level);
         break;
     }
     case ESP_HIDH_INPUT_EVENT:
     {
+        // 设备输入事件
         const uint8_t *bda = esp_hidh_dev_bda_get(param->input.dev);
-        if ((NULL != bda) && (NULL != xInputEventHandle) && xSemaphoreTake(xInputSemaphore, 0))
+
+        // 尝试获取 xInputParser 的控制权并更新数据
+        if ((NULL != bda) && xSemaphoreTake(xInputSemaphore, 0))
         {
             if (16 == param->input.length)
             {
+                // 解析手柄蓝牙数据
                 xInputRawData[0] = param->input.length;
                 memcpy(&xInputRawData[1], param->input.data, param->input.length);
                 if (0 == xInputParser.update(&xInputRawData[1], xInputRawData[0]))
                 {
                     xInputParser.outOfDate = true;
-                    // xQueueSend(xInputQueue, (void *)(&xInputRawData), 0);
-                    // xEventGroupSetBits(xInputEventHandle, XINPUT_UPDATE);
-                    // ESP_LOGI(TAG, "%d:%d", param->input.report_id, param->input.length);
                 }
                 else
                 {
@@ -70,6 +71,7 @@ void hidh_callback(void *handler_args, esp_event_base_t base, int32_t id, void *
                     ESP_LOGW(TAG, "invalid pack");
                 }
             }
+            // 释放控制权
             xSemaphoreGive(xInputSemaphore);
         }
         break;
@@ -101,20 +103,18 @@ void hid_demo_task(void *pvParameters)
 {
     size_t results_len = 0;
     esp_hid_scan_result_t *results = NULL;
-    while (NULL == xInputQueue)
-    {
-        vTaskDelay(1000);
-        ESP_LOGI(TAG, "wait queue...");
-    }
 
     ESP_LOGI(TAG, "SCAN...");
-    // start scan for HID devices
+
+    // 搜索蓝牙设备
     esp_hid_scan(SCAN_DURATION_SECONDS, &results_len, &results);
     ESP_LOGI(TAG, "SCAN: %u results", results_len);
     if (results_len)
     {
         esp_hid_scan_result_t *r = results;
         esp_hid_scan_result_t *cr = NULL;
+
+        // 遍历所有搜索到的设备
         while (r)
         {
             ESP_LOGI(TAG, "%s: " ESP_BD_ADDR_STR "\n", (r->transport == ESP_HID_TRANSPORT_BLE) ? "BLE" : "BT ", ESP_BD_ADDR_HEX(r->bda));
@@ -147,7 +147,7 @@ void hid_demo_task(void *pvParameters)
         }
         if (cr)
         {
-            // open the last result
+            // 打开最后一个设备
             esp_hidh_dev_open(cr->bda, cr->transport, cr->ble.addr_type);
         }
         // free the results
@@ -186,13 +186,7 @@ bool controler_hid_init(void)
     ret = esp_hidh_init(&config);
     ESP_ERROR_CHECK(ret);
 
-    xInputQueue = xQueueCreate(10, sizeof(xInputRawData));
-    if (xInputQueue == NULL)
-    {
-        ESP_LOGE(TAG, "Error creating the queue");
-        return false;
-    }
-
+    // 创建互斥量
     xInputSemaphore = xSemaphoreCreateMutex();
     if (xInputSemaphore == NULL)
     {
@@ -200,13 +194,7 @@ bool controler_hid_init(void)
         return false;
     }
 
-    xInputEventHandle = xEventGroupCreate();
-    if (xInputEventHandle == NULL)
-    {
-        ESP_LOGE(TAG, "Error creating eventHandle");
-        return false;
-    }
-
+    // 创建线程
     xTaskCreate(&hid_demo_task, "hid_task", 6 * 1024, NULL, 2, NULL);
     return true;
 }

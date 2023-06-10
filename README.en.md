@@ -3,7 +3,7 @@
 #### Description
 ESP-IDF BT/BLE HID Host Demo Connect to XBOX ONE S Controller
 
-An example use left trigger and right trigger of the controller to change the dutu of pwm
+An example use left trigger and right trigger of the controller to change the duty of pwm
 
 #### Software Architecture
 framework:
